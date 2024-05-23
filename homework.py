@@ -71,7 +71,8 @@ def get_api_answer(timestamp):
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
         if response.status_code != 200:
             logger.error(f'Ошибка {response.status_code}: {response.text}')
-            raise requests.RequestException(f'Ошибка {response.status_code}: {response.text}')
+            raise requests.RequestException(
+                f'Ошибка {response.status_code}: {response.text}')
         return response.json()
     except requests.RequestException as error:
         logger.error(f'Эндпоинт недоступен: {error}')
@@ -124,7 +125,8 @@ def main():
                     message = parse_status(homework)
                     send_message(bot, message)
             else:
-                logger.debug('Отсутствие изменения статуса: список домашних работ пуст')
+                logger.debug(
+                    'Отсутствие изменения статуса: список домашних работ пуст')
             timestamp = response.get('current_date', timestamp)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
