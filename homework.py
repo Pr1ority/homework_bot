@@ -85,7 +85,8 @@ def check_response(response):
     if 'homeworks' not in response or 'current_date' not in response:
         raise KeyError('Отсутствие ожидаемых ключей в ответе API')
     if not isinstance(response['homeworks'], list):
-        raise TypeError('Тип данных homeworks в ответе API не является списком')
+        raise TypeError(
+            'Тип данных homeworks в ответе API не является списком')
     return response['homeworks']
 
 
