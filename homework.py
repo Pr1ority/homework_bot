@@ -69,10 +69,7 @@ def get_api_answer(timestamp):
     payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
-        if response.status_code != 200:
-            logger.error(f'Ошибка {response.status_code}: {response.text}')
-            raise requests.RequestException(
-                f'Ошибка {response.status_code}: {response.text}')
+        response.raise_for_status()
         return response.json()
     except requests.RequestException as error:
         logger.error(f'Эндпоинт недоступен: {error}')
