@@ -24,7 +24,6 @@ HOMEWORK_VERDICTS = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-bot = TeleBot(token=TELEGRAM_TOKEN)
 
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -54,7 +53,6 @@ def check_tokens():
     return True
 
 
-@bot.message_handler(content_types=['text'])
 def send_message(bot, message):
     """Отправка сообщения в Telegram-чат."""
     try:
@@ -71,7 +69,9 @@ def get_api_answer(timestamp):
     payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
-        response.raise_for_status()
+        if response.status_code != 200:
+            logger.error(f'Ошибка {response.status_code}: {response.text}')
+            raise requests.RequestException(f'Ошибка {response.status_code}')
         return response.json()
     except requests.RequestException as error:
         logger.error(f'Эндпоинт недоступен: {error}')
@@ -85,6 +85,7 @@ def check_response(response):
     if 'homeworks' not in response or 'current_date' not in response:
         raise KeyError('Отсутствие ожидаемых ключей в ответе API')
     if not isinstance(response['homeworks'], list):
+        logger.debug(f'Отсутствие изменения статуса: {response}')
         raise TypeError(
             'Тип данных homeworks в ответе API не является списком')
     return response['homeworks']
