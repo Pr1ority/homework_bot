@@ -70,7 +70,11 @@ def send_message(bot, message):
 def get_api_answer(timestamp):
     """Делает запрос к API и возвращает ответ."""
     params = {'from_date': timestamp}
-    response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    try:
+        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    except requests.exceptions.RequestException as error:
+        logger.error(f'Ошибка при запросе к API: {error}')
+        raise 
     if response.status_code != HTTPStatus.OK:
         raise HTTPRequestError(response)
     return response.json()
