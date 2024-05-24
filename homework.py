@@ -74,7 +74,7 @@ def get_api_answer(timestamp):
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     except requests.exceptions.RequestException as error:
         logger.error(f'Ошибка при запросе к API: {error}')
-        raise 
+        raise
     if response.status_code != HTTPStatus.OK:
         raise HTTPRequestError(response)
     return response.json()
