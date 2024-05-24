@@ -5,6 +5,9 @@ import requests
 from telebot import TeleBot
 import time
 from dotenv import load_dotenv
+from http import HTTPStatus
+
+from exceptions import HTTPRequestError
 
 load_dotenv()
 
@@ -67,21 +70,10 @@ def send_message(bot, message):
 def get_api_answer(timestamp):
     """Делает запрос к API и возвращает ответ."""
     params = {'from_date': timestamp}
-    try:
-        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as http_err:
-        logger.error(f'HTTP ошибка: {http_err}')
-        raise
-    except requests.exceptions.RequestException as req_err:
-        logger.error(f'Ошибка запроса: {req_err}')
-        raise
-
-    try:
-        return response.json()
-    except ValueError as json_err:
-        logger.error(f'Ошибка преобразования JSON: {json_err}')
-        raise
+    response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    if response.status_code != HTTPStatus.OK:
+        raise HTTPRequestError(response)
+    return response.json()
 
 
 def check_response(response):
