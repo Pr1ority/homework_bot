@@ -75,7 +75,8 @@ def get_api_answer(timestamp):
         logger.error(f'Ошибка при запросе к API: {error}')
         raise
     except ValueError as error:
-        logger.error(f'Ошибка при преобразовании ответа API из формата JSON: {error}')
+        logger.error(
+            f'Ошибка при преобразовании ответа API из формата JSON: {error}')
         raise
 
 
