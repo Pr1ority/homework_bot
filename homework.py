@@ -69,17 +69,13 @@ def get_api_answer(timestamp):
     params = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        if response.status_code != 200:
-            raise requests.exceptions.HTTPError(
-                f'Ошибка {response.status_code}: {response.text}'
-            )
+        response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as error:
         logger.error(f'Ошибка при запросе к API: {error}')
         raise
     except ValueError as error:
-        logger.error(
-            f'Ошибка при преобразовании ответа API из формата JSON: {error}')
+        logger.error(f'Ошибка при преобразовании ответа API из формата JSON: {error}')
         raise
 
 
