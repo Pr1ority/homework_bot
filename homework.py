@@ -65,19 +65,18 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    """Запрос к Эндпоинту API-сервиса."""
-    payload = {'from_date': timestamp}
+    """Делает запрос к API и возвращает ответ."""
+    params = {'from_date': timestamp}
     try:
-        response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
-        if response.status_code != 200:
-            logger.error(f'Эндпоинт недоступен. Код ответа: {response.status_code}')
-            raise requests.RequestException(f'API вернул статус-код не равный 200: {response.status_code}')
+        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+        response.raise_for_status()
         return response.json()
-    except requests.RequestException as error:
+    except requests.exceptions.RequestException as error:
         logger.error(f'Ошибка при запросе к API: {error}')
         raise
     except ValueError as error:
-        logger.error(f'Некорректный JSON: {error}')
+        logger.error(
+            f'Ошибка при преобразовании ответа API из формата JSON: {error}')
         raise
 
 
