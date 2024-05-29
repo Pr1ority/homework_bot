@@ -54,6 +54,25 @@ HOMEWORK_VERDICTS = {
 TOKEN_NAMES = {'PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID'}
 
 
+def setup_logging():
+    """Установка logging конфигурации."""
+    home_dir = os.path.expanduser('~')
+    log_file = os.path.join(home_dir, 'practicum_bot.log')
+
+    logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        level=logging.DEBUG,
+        handlers=[
+            logging.FileHandler(log_file, mode='w'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+    return logging.getLogger(__name__)
+
+logger = setup_logging()
+
+
 def check_tokens():
     """Проверка доступности необходимых переменных окружения."""
     missing_tokens = [name for name in TOKEN_NAMES if not globals().get(name)]
@@ -158,21 +177,4 @@ def main():
 
 
 if __name__ == '__main__':
-    def setup_logging():
-        """Установка logging конфигурации."""
-        home_dir = os.path.expanduser('~')
-        log_file = os.path.join(home_dir, 'practicum_bot.log')
-
-        logging.basicConfig(
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            level=logging.DEBUG,
-            handlers=[
-                logging.FileHandler(log_file, mode='w'),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
-
-        return logging.getLogger(__name__)
-
-    logger = setup_logging()
     main()
