@@ -70,6 +70,7 @@ def setup_logging():
 
     return logging.getLogger(__name__)
 
+
 logger = setup_logging()
 
 
