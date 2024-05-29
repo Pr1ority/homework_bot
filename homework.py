@@ -59,7 +59,7 @@ def check_tokens():
     missing_tokens = [name for name in TOKEN_NAMES if not globals().get(name)]
     if missing_tokens:
         logger.critical(
-            MISSING_ENV_VARS.format(missing_tokens=', '.join(missing_tokens)))
+            MISSING_ENV_VARS.format(missing_tokens=missing_tokens))
         return False
     return True
 
