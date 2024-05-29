@@ -12,26 +12,26 @@ from exceptions import HTTPRequestError
 
 load_dotenv()
 
-MISSING_ENV_VARS = '''Отсутствие необходимых переменных окружения:
- {missing_tokens}'''
+MISSING_ENV_VARS = ('Отсутствие необходимых переменных окружения:'
+                    '{missing_tokens}')
 MESSAGE_SENT_SUCCESS = 'Сообщение успешно отправлено: {message}'
-MESSAGE_SEND_ERROR = '''Произошёл сбой: {error}. При отправке сообщения:
- {message}'''
-REQUEST_ERROR = '''Ошибка выполнения запроса {req_error} URL: {url},
- Headers: {headers}, Params: {params}'''
-RESPONSE_STATUS_ERROR = '''Неверный статус ответа: {status_code}. URL: {url},
- Headers: {headers}, Params: {params}'''
-API_RESPONSE_ERROR = 'Ошибка в ответе API: {error_message}'
-INVALID_API_RESPONSE_TYPE = '''Ответ API не является словарем, получен тип:
- {response_type}'''
-MISSING_API_KEY = 'Отсутствие ключа "homeworks" в ответе API'
-INVALID_HOMEWORKS_TYPE = '''Тип данных homeworks в ответе API не является
- списком, получен тип: {homeworks_type}'''
-MISSING_HOMEWORK_KEYS = '''Отсутствие ожидаемых ключей в ответе API:
- {missing_keys}'''
+MESSAGE_SEND_ERROR = ('Произошёл сбой: {error}. При отправке сообщения:'
+                      '{message}')
+REQUEST_ERROR = ('Ошибка выполнения запроса {req_error} URL: {url},'
+                 'Headers: {headers}, Params: {params}')
+RESPONSE_STATUS_ERROR = ('Неверный статус ответа: {status_code}. URL: {url},'
+                         'Headers: {headers}, Params: {params}')
+API_RESPONSE_ERROR = 'Ошибка в ответе API: {error_message}, ключ:{error_key}'
+INVALID_API_RESPONSE_TYPE = ('Ответ API не является словарем, получен тип:'
+                             '{response_type}')
+MISSING_HOMEWORKS_KEY = 'Отсутствие ключа "homeworks" в ответе API'
+INVALID_HOMEWORKS_TYPE = ('Тип данных homeworks в ответе API не является'
+                          'списком, получен тип: {homeworks_type}')
+MISSING_HOMEWORK_KEYS = ('Отсутствие ожидаемых ключей в ответе API:'
+                         '{missing_keys}')
 UNKNOWN_HOMEWORK_STATUS = 'Неизвестный статус домашней работы: {status}'
-STATUS_CHANGED_MESSAGE = '''Изменился статус проверки работы "{homework_name}".
- {verdict}'''
+STATUS_CHANGED_MESSAGE = ('Изменился статус проверки работы "{homework_name}".'
+                          '{verdict}')
 NO_STATUS_CHANGE = 'Отсутствие изменения статуса: список домашних работ пуст'
 PROGRAM_FAILURE = 'Сбой в работе программы: {error}'
 
@@ -52,26 +52,6 @@ HOMEWORK_VERDICTS = {
 }
 
 TOKEN_NAMES = {'PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID'}
-
-
-def setup_logging():
-    """Установка logging конфигурации."""
-    home_dir = os.path.expanduser('~')
-    log_file = os.path.join(home_dir, 'practicum_bot.log')
-
-    logging.basicConfig(
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        level=logging.DEBUG,
-        handlers=[
-            logging.FileHandler(log_file, mode='w'),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-
-    return logging.getLogger(__name__)
-
-
-logger = setup_logging()
 
 
 def check_tokens():
@@ -102,21 +82,19 @@ def get_api_answer(timestamp):
             headers=HEADERS,
             params=params,
         )
-        response.raise_for_status()
     except requests.RequestException as req_error:
-        logger.error(REQUEST_ERROR.format(req_error=req_error, url=ENDPOINT,
-                                          headers=HEADERS, params=params))
-        raise HTTPRequestError(f'Ошибка выполнения запроса: {req_error}')
+        raise RuntimeError(REQUEST_ERROR.format(
+            req_error=req_error, url=ENDPOINT, headers=HEADERS, params=params))
     if response.status_code != HTTPStatus.OK:
         raise HTTPRequestError(RESPONSE_STATUS_ERROR.format(
             status_code=response.status_code, url=ENDPOINT, headers=HEADERS,
             params=params))
     response_json = response.json()
     if 'code' in response_json or 'error' in response_json:
-        error_message = response_json.get('error', response_json.get(
-            'code', 'Неизвестная ошибка'))
+        error_key = 'error' if 'error' in response_json else 'code'
+        error_message = response_json[error_key]
         raise HTTPRequestError(API_RESPONSE_ERROR.format(
-            error_message=error_message))
+            error_message=error_message, error_key=error_key))
     return response_json
 
 
@@ -125,9 +103,9 @@ def check_response(response):
     if not isinstance(response, dict):
         raise TypeError(INVALID_API_RESPONSE_TYPE.format(
             response_type=type(response)))
-    homeworks = response.get('homeworks')
-    if homeworks is None:
-        raise KeyError(MISSING_API_KEY)
+    if 'homeworks' not in response:
+        raise KeyError(MISSING_HOMEWORKS_KEY)
+    homeworks = response['homeworks']
     if not isinstance(homeworks, list):
         raise TypeError(
             INVALID_HOMEWORKS_TYPE.format(homeworks_type=type(homeworks)))
@@ -139,8 +117,7 @@ def parse_status(homework):
     required_keys = ['homework_name', 'status']
     missing_keys = [key for key in required_keys if key not in homework]
     if missing_keys:
-        raise KeyError(MISSING_HOMEWORK_KEYS.format(missing_keys=', '.join(
-            missing_keys)))
+        raise KeyError(MISSING_HOMEWORK_KEYS.format(missing_keys=missing_keys))
     homework_name = homework['homework_name']
     status = homework['status']
     if status not in HOMEWORK_VERDICTS:
@@ -173,12 +150,29 @@ def main():
                     NO_STATUS_CHANGE)
         except Exception as error:
             message = PROGRAM_FAILURE.format(error=error)
+            logger.error(message)
             if message != last_error_message:
-                logger.error(message)
-                send_message(bot, message)
-                last_error_message = message
+                if send_message(bot, message):
+                    last_error_message = message
         time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
+    def setup_logging():
+        """Установка logging конфигурации."""
+        home_dir = os.path.expanduser('~')
+        log_file = os.path.join(home_dir, 'practicum_bot.log')
+
+        logging.basicConfig(
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            level=logging.DEBUG,
+            handlers=[
+                logging.FileHandler(log_file, mode='w'),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+
+        return logging.getLogger(__name__)
+
+    logger = setup_logging()
     main()
