@@ -21,7 +21,8 @@ REQUEST_ERROR = ('Ошибка выполнения запроса {req_error} U
                  'Headers: {headers}, Params: {params}')
 RESPONSE_STATUS_ERROR = ('Неверный статус ответа: {status_code}. URL: {url},'
                          'Headers: {headers}, Params: {params}')
-API_RESPONSE_ERROR = 'Ошибка в ответе API: {error_message}, ключ:{error_key}'
+API_RESPONSE_ERROR = ('Ошибка в ответе API: {error_message}, ключ:{error_key}.'
+                      'URL: {url}, Headers: {headers}, Params: {params}')
 INVALID_API_RESPONSE_TYPE = ('Ответ API не является словарем, получен тип:'
                              '{response_type}')
 MISSING_HOMEWORKS_KEY = 'Отсутствие ключа "homeworks" в ответе API'
@@ -54,31 +55,11 @@ HOMEWORK_VERDICTS = {
 TOKEN_NAMES = {'PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID'}
 
 
-def setup_logging():
-    """Установка logging конфигурации."""
-    home_dir = os.path.expanduser('~')
-    log_file = os.path.join(home_dir, 'practicum_bot.log')
-
-    logging.basicConfig(
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        level=logging.DEBUG,
-        handlers=[
-            logging.FileHandler(log_file, mode='w'),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-
-    return logging.getLogger(__name__)
-
-
-logger = setup_logging()
-
-
 def check_tokens():
     """Проверка доступности необходимых переменных окружения."""
     missing_tokens = [name for name in TOKEN_NAMES if not globals().get(name)]
     if missing_tokens:
-        logger.critical(
+        logging.critical(
             MISSING_ENV_VARS.format(missing_tokens=missing_tokens))
         return False
     return True
@@ -88,9 +69,11 @@ def send_message(bot, message):
     """Отправка сообщения в Telegram-чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logger.debug(MESSAGE_SENT_SUCCESS.format(message=message))
+        logging.debug(MESSAGE_SENT_SUCCESS.format(message=message))
+        return True
     except Exception as error:
-        logger.error(MESSAGE_SEND_ERROR.format(error=error, message=message))
+        logging.error(MESSAGE_SEND_ERROR.format(error=error, message=message))
+        return False
 
 
 def get_api_answer(timestamp):
@@ -110,11 +93,12 @@ def get_api_answer(timestamp):
             status_code=response.status_code, url=ENDPOINT, headers=HEADERS,
             params=params))
     response_json = response.json()
-    if 'code' in response_json or 'error' in response_json:
-        error_key = 'error' if 'error' in response_json else 'code'
-        error_message = response_json[error_key]
-        raise HTTPRequestError(API_RESPONSE_ERROR.format(
-            error_message=error_message, error_key=error_key))
+    for error_key in ['error', 'code']:
+        if error_key in response_json:
+            error_message = response_json[error_key]
+            raise HTTPRequestError(API_RESPONSE_ERROR.format(
+                error_message=error_message, error_key=error_key),
+                url=ENDPOINT, headers=HEADERS, params=params)
     return response_json
 
 
@@ -166,16 +150,30 @@ def main():
                 if send_message(bot, message):
                     timestamp = response.get('current_date', timestamp)
             else:
-                logger.debug(
+                logging.debug(
                     NO_STATUS_CHANGE)
         except Exception as error:
             message = PROGRAM_FAILURE.format(error=error)
-            logger.error(message)
-            if message != last_error_message:
-                if send_message(bot, message):
-                    last_error_message = message
+            logging.error(message)
+            if message != last_error_message and send_message(bot, message):
+                last_error_message = message
         time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
+    def setup_logging():
+        """Установка logging конфигурации."""
+        home_dir = os.path.expanduser('~')
+        log_file = os.path.join(home_dir, 'practicum_bot.log')
+
+        logging.basicConfig(
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            level=logging.DEBUG,
+            handlers=[
+                logging.FileHandler(log_file, mode='w'),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+
+        return logging.getLogger(__name__)
     main()
