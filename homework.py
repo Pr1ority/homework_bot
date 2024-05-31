@@ -86,8 +86,9 @@ def get_api_answer(timestamp):
             params=params,
         )
     except requests.RequestException as req_error:
-        raise RuntimeError(REQUEST_ERROR.format(
+        logging.error(REQUEST_ERROR.format(
             req_error=req_error, url=ENDPOINT, headers=HEADERS, params=params))
+        raise
     if response.status_code != HTTPStatus.OK:
         raise HTTPRequestError(RESPONSE_STATUS_ERROR.format(
             status_code=response.status_code, url=ENDPOINT, headers=HEADERS,
@@ -97,8 +98,8 @@ def get_api_answer(timestamp):
         if error_key in response_json:
             error_message = response_json[error_key]
             raise HTTPRequestError(API_RESPONSE_ERROR.format(
-                error_message=error_message, error_key=error_key),
-                url=ENDPOINT, headers=HEADERS, params=params)
+                error_message=error_message, error_key=error_key,
+                url=ENDPOINT, headers=HEADERS, params=params))
     return response_json
 
 
@@ -133,6 +134,7 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
+    logger = setup_logging()
     if not check_tokens():
         return
 
@@ -150,11 +152,11 @@ def main():
                 if send_message(bot, message):
                     timestamp = response.get('current_date', timestamp)
             else:
-                logging.debug(
+                logger.debug(
                     NO_STATUS_CHANGE)
         except Exception as error:
             message = PROGRAM_FAILURE.format(error=error)
-            logging.error(message)
+            logger.error(message)
             if message != last_error_message and send_message(bot, message):
                 last_error_message = message
         time.sleep(RETRY_PERIOD)
