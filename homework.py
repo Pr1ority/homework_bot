@@ -134,7 +134,6 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-    logger = setup_logging()
     if not check_tokens():
         return
 
@@ -152,30 +151,26 @@ def main():
                 if send_message(bot, message):
                     timestamp = response.get('current_date', timestamp)
             else:
-                logger.debug(
+                logging.debug(
                     NO_STATUS_CHANGE)
         except Exception as error:
             message = PROGRAM_FAILURE.format(error=error)
-            logger.error(message)
+            logging.error(message)
             if message != last_error_message and send_message(bot, message):
                 last_error_message = message
         time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
-    def setup_logging():
-        """Установка logging конфигурации."""
-        home_dir = os.path.expanduser('~')
-        log_file = os.path.join(home_dir, 'practicum_bot.log')
+    home_dir = os.path.expanduser('~')
+    log_file = os.path.join(home_dir, 'practicum_bot.log')
 
-        logging.basicConfig(
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            level=logging.DEBUG,
-            handlers=[
-                logging.FileHandler(log_file, mode='w'),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
-
-        return logging.getLogger(__name__)
+    logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        level=logging.DEBUG,
+        handlers=[
+            logging.FileHandler(log_file, mode='w'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
     main()
